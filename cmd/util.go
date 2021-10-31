@@ -19,6 +19,19 @@ func GetPersistentFlags(cmd *cobra.Command) (string, string) {
 	return host, port
 }
 
+func AwaitUserConfirm() bool {
+	input := "n"
+	fmt.Scanln(&input)
+	log.Debug(input, " input\n")
+
+	if strings.Contains(strings.ToLower(input), "y") {
+		log.Debug("confirmed")
+		return true
+	}
+	return false
+
+}
+
 // AwaitConnectorInput prompts the user for input
 // A connector can be selected by entering a connector id e.g
 // > 4

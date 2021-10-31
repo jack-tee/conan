@@ -42,10 +42,15 @@ var pauseCmd = &cobra.Command{
 			return
 
 		} else if connectorIdToPause == -2 {
-			fmt.Fprintf(cmd.OutOrStdout(), "Pausing all connectors\n")
-			for id, connector := range connectors {
-				fmt.Fprintf(cmd.OutOrStdout(), "Pausing connector %d %s\n", id, connector.Name)
-				PauseConnector(host, port, connector.Name)
+			fmt.Fprintf(cmd.OutOrStdout(), "Pausing all LISTED connectors. Enter y to confirm:\n")
+
+			if AwaitUserConfirm() {
+				for id, connector := range connectors {
+					fmt.Fprintf(cmd.OutOrStdout(), "Pausing connector %d %s\n", id, connector.Name)
+					PauseConnector(host, port, connector.Name)
+				}
+			} else {
+				fmt.Fprintf(cmd.OutOrStdout(), "Quitting\n")
 			}
 
 		} else if connectorToPause, ok := connectors[connectorIdToPause]; !ok {
