@@ -41,6 +41,7 @@ func Execute() {
 }
 
 func init() {
+	//fmt.Println("Running root.go init")
 	//cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
@@ -62,10 +63,6 @@ func toggleDebug(cmd *cobra.Command, args []string) {
 		log.Info("Debug logs enabled")
 		log.SetLevel(log.DebugLevel)
 	}
-	// } else {
-	// 	plainFormatter := new(PlainFormatter)
-	// 	log.SetFormatter(plainFormatter)
-	// }
 	log.SetFormatter(&log.TextFormatter{})
 }
 
