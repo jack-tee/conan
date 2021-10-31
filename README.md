@@ -15,8 +15,8 @@ CONNECTORS: 3
     
 1 an-example-whitelist-connector                                RUNNING
     1.0   mydatabase:myschema.table1                                RUNNING  10.0.0.2:8083  
-    1.1   mydatabase:myschema.table1                                RUNNING  10.0.0.1:8083  
-    1.2   mydatabase:myschema.table1                                RUNNING  10.0.0.2:8083  
+    1.1   mydatabase:myschema.table2                                RUNNING  10.0.0.1:8083  
+    1.2   mydatabase:myschema.table3                                RUNNING  10.0.0.2:8083  
     
 2 an-example-pubsub-sink-connector                              PAUSED
     2.0    .* -> mypubsubtopic                                      PAUSED  10.0.0.3:8083
