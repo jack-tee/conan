@@ -24,7 +24,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// pauseCmd represents the pause command
+type ConnectorMode string
+
+const (
+	Pause  ConnectorMode = "pause"
+	Resume ConnectorMode = "resume"
+)
+
 var pauseCmd = &cobra.Command{
 	Use:    "pause",
 	Short:  "Pause connectors",
@@ -34,38 +40,27 @@ var pauseCmd = &cobra.Command{
 
 		connectors := List(cmd, args)
 
-		fmt.Fprintf(cmd.OutOrStdout(), "Enter a connectorId to pause it e.g 4, enter all to pause all LISTED connectors or q to quit:\n")
-		connectorIdToPause := AwaitConnectorInput()
+		executeConnectorOperation(cmd, connectors, Pause)
 
-		if connectorIdToPause == -1 {
-			fmt.Fprintf(cmd.OutOrStdout(), "Quitting\n")
-			return
+	},
+}
 
-		} else if connectorIdToPause == -2 {
-			fmt.Fprintf(cmd.OutOrStdout(), "Pausing all LISTED connectors. Enter y to confirm:\n")
+var resumeCmd = &cobra.Command{
+	Use:    "resume",
+	Short:  "Resume connectors",
+	Long:   `Resume connectors.`,
+	PreRun: toggleDebug,
+	Run: func(cmd *cobra.Command, args []string) {
 
-			if AwaitUserConfirm() {
-				for id, connector := range connectors {
-					fmt.Fprintf(cmd.OutOrStdout(), "Pausing connector %d %s\n", id, connector.Name)
-					PauseConnector(host, port, connector.Name)
-				}
-			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "Quitting\n")
-			}
+		connectors := List(cmd, args)
 
-		} else if connectorToPause, ok := connectors[connectorIdToPause]; !ok {
-			fmt.Fprintf(cmd.OutOrStdout(), "ERROR. connectorId: [%d] not found in connectors. Exiting.\n", connectorIdToPause)
-
-		} else {
-			fmt.Fprintf(cmd.OutOrStdout(), "Pausing connector %d %s\n", connectorToPause.Id, connectorToPause.Name)
-			PauseConnector(host, port, connectorToPause.Name)
-
-		}
+		executeConnectorOperation(cmd, connectors, Resume)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(pauseCmd)
+	rootCmd.AddCommand(resumeCmd)
 
 	// Here you will define your flags and configuration settings.
 
@@ -78,15 +73,37 @@ func init() {
 	// pauseCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func PauseConnector(host string, port string, connectorName string) {
-	PutConnector("pause", host, port, connectorName)
+func executeConnectorOperation(cmd *cobra.Command, connectors map[int]Connector, mode ConnectorMode) {
+	fmt.Fprintf(cmd.OutOrStdout(), "Enter a connectorId to %s it e.g 4, enter all to %s all LISTED connectors or q to quit:\n", mode, mode)
+
+	connectorIdSelected := AwaitConnectorInput()
+
+	if connectorIdSelected == -1 {
+		fmt.Fprintf(cmd.OutOrStdout(), "Quitting\n")
+		return
+
+	} else if connectorIdSelected == -2 {
+		fmt.Fprintf(cmd.OutOrStdout(), "%s all LISTED connectors? Enter y to confirm:\n", mode)
+
+		if AwaitUserConfirm() {
+			for id, connector := range connectors {
+				PutConnector(mode, host, port, connector.Name)
+				fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd\n", id, connector.Name, mode)
+			}
+		} else {
+			fmt.Fprintf(cmd.OutOrStdout(), "Quitting\n")
+		}
+
+	} else if connectorSelected, ok := connectors[connectorIdSelected]; !ok {
+		fmt.Fprintf(cmd.OutOrStdout(), "ERROR. connectorId: [%d] not found in connectors. Exiting.\n", connectorIdSelected)
+
+	} else {
+		PutConnector(mode, host, port, connectorSelected.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd\n", connectorSelected.Id, connectorSelected.Name, mode)
+	}
 }
 
-func ResumeConnector(host string, port string, connectorName string) {
-	PutConnector("resume", host, port, connectorName)
-}
-
-func PutConnector(mode string, host string, port string, connectorName string) {
+func PutConnector(mode ConnectorMode, host string, port string, connectorName string) {
 	var emptyBody io.Reader = nil
 
 	pauseUrl := fmt.Sprintf("http://%s:%s/connectors/%s/%s", host, port, connectorName, mode)
