@@ -79,7 +79,7 @@ func executeConnectorOperation(cmd *cobra.Command, connectors map[int]Connector,
 	connectorIdSelected := AwaitConnectorInput()
 
 	if connectorIdSelected == -1 {
-		fmt.Fprintf(cmd.OutOrStdout(), "Quitting\n")
+		fmt.Fprintf(cmd.OutOrStdout(), "Quitting.\n")
 		return
 
 	} else if connectorIdSelected == -2 {
@@ -88,10 +88,10 @@ func executeConnectorOperation(cmd *cobra.Command, connectors map[int]Connector,
 		if AwaitUserConfirm() {
 			for id, connector := range connectors {
 				PutConnector(mode, host, port, connector.Name)
-				fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd\n", id, connector.Name, mode)
+				fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd.\n", id, connector.Name, mode)
 			}
 		} else {
-			fmt.Fprintf(cmd.OutOrStdout(), "Quitting\n")
+			fmt.Fprintf(cmd.OutOrStdout(), "Quitting.\n")
 		}
 
 	} else if connectorSelected, ok := connectors[connectorIdSelected]; !ok {
@@ -99,7 +99,7 @@ func executeConnectorOperation(cmd *cobra.Command, connectors map[int]Connector,
 
 	} else {
 		PutConnector(mode, host, port, connectorSelected.Name)
-		fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd\n", connectorSelected.Id, connectorSelected.Name, mode)
+		fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd.\n", connectorSelected.Id, connectorSelected.Name, mode)
 	}
 }
 
