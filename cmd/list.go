@@ -23,6 +23,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var taskFilter string
+
 const ConnectorsTemplate = `CONNECTORS: {{ len . }}
 {{ range $id, $connector := . -}}
     {{ $connector.Id }} {{ printf "%-80s" $connector.Name }} {{ $connector.Details.Connector.State }}
@@ -66,10 +68,24 @@ func List(cmd *cobra.Command, args []string) map[int]Connector {
 		}
 
 		connectors = filteredConnectors
-		log.Debug("connectors filtered to ", connectors)
+		log.Debug("connectors filtered by arg to ", connectors)
 	}
 
 	connectors = GetConnectorsDetails(host, port, connectors)
+
+	if taskFilter != "" {
+		filteredConnectors := make(map[int]Connector)
+		for i, c := range connectors {
+			for _, t := range c.Details.Tasks {
+				if strings.Contains(strings.ToLower(t.Summary()), strings.ToLower(taskFilter)) {
+					filteredConnectors[i] = c
+				}
+			}
+		}
+
+		connectors = filteredConnectors
+		log.Debug("connectors filtered by task-filter to ", connectors)
+	}
 
 	t := template.Must(template.New("").Parse(ConnectorsTemplate))
 	t.Execute(cmd.OutOrStdout(), connectors)
@@ -79,6 +95,7 @@ func List(cmd *cobra.Command, args []string) map[int]Connector {
 func init() {
 	//fmt.Println("Running list.go init")
 	rootCmd.AddCommand(listCmd)
+	listCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
 
 	// Here you will define your flags and configuration settings.
 

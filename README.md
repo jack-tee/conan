@@ -32,6 +32,40 @@ CONNECTORS: 1
     2.0    .* -> mypubsubtopic                                      PAUSED  10.0.0.3:8083
 ```
 
+Or by the task summary to make it easier to identify connectors that read from certain tables
+
+```
+> conan list -t example
+
+CONNECTORS: 1
+0 an-example-bulk-connector                                     RUNNING
+    0.0   select * from texample                                    RUNNING  10.0.0.1:8083
+
+```
+
+### Top level args
+You can specify a host and port to connect to, by default it uses localhost:8083, there is also a debug mode to see debug output
+
+```
+> conan -H myhost -p 4042 list -d
+
+INFO[0000] debug logs enabled                           
+DEBU[0000] getting connectors using URL: http://myhost:4042/connectors 
+DEBU[0000] connectors found: [an-example-bulk-connector an-example-whitelist-connector an-example-pubsub-sink-connector]
+DEBU[0000] getting connector details for 0 an-example-bulk-connector 
+DEBU[0000] getting connector status using URL: http://myhost:4042/connectors/an-example-bulk-connector/status
+...
+
+
+CONNECTORS: 3
+0 an-example-bulk-connector                                     RUNNING
+    0.0   select * from texample                                    RUNNING  10.0.0.1:8083
+...
+
+```
+
+
+
 ## Pause/Resume Connectors
 
 You can pause or resume connectors
