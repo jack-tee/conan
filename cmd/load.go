@@ -88,11 +88,12 @@ var loadCmd = &cobra.Command{
 
 			fmt.Fprintf(cmd.OutOrStdout(), "class %s, plugin %s\n", connectorClass, pluginClass)
 
-			json, _ := json.Marshal(conf)
+			// validate
+			confJson, _ := json.Marshal(conf)
 
 			validateUrl := fmt.Sprintf("http://%s:%s/connector-plugins/%s/config/validate", host, port, pluginClass)
 
-			req, err := http.NewRequest(http.MethodPut, validateUrl, bytes.NewBuffer(json))
+			req, err := http.NewRequest(http.MethodPut, validateUrl, bytes.NewBuffer(confJson))
 			cobra.CheckErr(err)
 
 			req.Header.Set("Content-Type", "application/json")
@@ -102,17 +103,57 @@ var loadCmd = &cobra.Command{
 			respBodyBytes, _ := ioutil.ReadAll(resp.Body)
 
 			log.Debug("Got response status: ", resp.StatusCode)
-			fmt.Fprintf(cmd.OutOrStdout(), "response %s, StatusCode %d\n", string(respBodyBytes), resp.StatusCode)
+			//fmt.Fprintf(cmd.OutOrStdout(), "response %s, StatusCode %d\n", string(respBodyBytes), resp.StatusCode)
+			var validationResponse ValidationResponse
 
-			// validate
+			json.Unmarshal(respBodyBytes, &validationResponse)
+
+			fmt.Println(validationResponse)
+			// return ValidationResponse on a channel?
+
+			if validationResponse.ErrorCount == 0 {
+				fmt.Fprintf(cmd.OutOrStdout(), "config for %s is valid\n", validationResponse.Name)
+			} else {
+				fmt.Fprintf(cmd.OutOrStdout(), "config for %s is invalid, skipping loading\n", validationResponse.Name)
+				continue
+			}
+			fmt.Println("loading connector")
 			// check response error_count = 0 means it is valid
 			// log any errors
 
 			// put to the config endpoint
+			loadUrl := fmt.Sprintf("http://%s:%s/connectors/%s/config", host, port, connectorName)
+
+			req, err = http.NewRequest(http.MethodPut, loadUrl, bytes.NewBuffer(confJson))
+			cobra.CheckErr(err)
+
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err = http.DefaultClient.Do(req)
+			cobra.CheckErr(err)
+			//respBodyBytes, _ = ioutil.ReadAll(resp.Body)
+
+			log.Debug("Got response status: ", resp.StatusCode)
+			fmt.Println("loaded connector ", resp.StatusCode)
 
 		}
 
 	},
+}
+
+type ValidationResponse struct {
+	Name       string
+	ErrorCount int `json:"error_count"`
+	Configs    []ValidationResponseField
+}
+
+type ValidationResponseField struct {
+	Value ValidationResponseFieldValue
+}
+
+type ValidationResponseFieldValue struct {
+	Name   string
+	Errors []string
 }
 
 func init() {
