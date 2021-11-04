@@ -29,6 +29,51 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type ConfigFile struct {
+	FileName       string
+	ConnectorName  string
+	ConnectorClass string
+	PluginClass    string
+	Config         map[string]string
+	ConfigBytes    []byte
+	ValidationResp ValidationResponse
+}
+
+func (cf *ConfigFile) Read() {
+	configFile, _ := os.Open(cf.FileName)
+	byteValue, _ := ioutil.ReadAll(configFile)
+
+	var configObj map[string]interface{}
+	json.Unmarshal([]byte(byteValue), &configObj)
+
+	connectorName := strings.Split(filepath.Base(cf.FileName), ".")[0]
+
+	var conf = make(map[string]string)
+
+	if _, ok := configObj["config"]; ok {
+		configConnectorName := configObj["name"].(string)
+		if configConnectorName != connectorName {
+			log.Warn("connector name [", configConnectorName, "] in file [", cf.FileName, "] does not match filename")
+		}
+		connectorName = configConnectorName
+
+		configObj = configObj["config"].(map[string]interface{})
+	}
+	cf.ConnectorName = connectorName
+
+	for k, v := range configObj {
+		conf[k] = v.(string)
+	}
+	cf.Config = conf
+
+	cf.ConnectorClass = cf.Config["connector.class"]
+	classParts := strings.Split(cf.ConnectorClass, ".")
+	cf.PluginClass = classParts[len(classParts)-1]
+
+	cf.ConfigBytes, _ = json.Marshal(conf)
+
+}
+
 // loadCmd represents the load command
 var loadCmd = &cobra.Command{
 	Use:   "load",
@@ -53,98 +98,82 @@ var loadCmd = &cobra.Command{
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "loading files %s\n", files)
 
-		for _, file := range files {
-			configFile, _ := os.Open(file)
-			byteValue, _ := ioutil.ReadAll(configFile)
+		configs := make([]ConfigFile, 0)
 
-			var configObj map[string]interface{}
-			json.Unmarshal([]byte(byteValue), &configObj)
+		for _, fileName := range files {
+			configFile := ConfigFile{FileName: fileName}
+			configFile.Read()
 
-			connectorName := strings.Split(filepath.Base(file), ".")[0]
+			configFile.ValidationResp = ValidateConfig(host, port, configFile)
+			//fmt.Println(configFile)
 
-			var conf = make(map[string]string)
+			configs = append(configs, configFile)
+		}
+		//fmt.Println(configs)
 
-			if _, ok := configObj["config"]; ok {
-				configConnectorName := configObj["name"].(string)
-				if configConnectorName != connectorName {
-					log.Warn("connector name [", configConnectorName, "] in file [", file, "] does not match filename")
-				}
-				connectorName = configConnectorName
-
-				configObj = configObj["config"].(map[string]interface{})
-			}
-			for k, v := range configObj {
-				conf[k] = v.(string)
-			}
-
-			log.Debug("in ", file, " found ", conf)
-			fmt.Fprintf(cmd.OutOrStdout(), "loading %s as %s\n", file, connectorName)
-
-			//fmt.Println(conf)
-
-			connectorClass := conf["connector.class"]
-			classParts := strings.Split(connectorClass, ".")
-			pluginClass := classParts[len(classParts)-1]
-
-			fmt.Fprintf(cmd.OutOrStdout(), "class %s, plugin %s\n", connectorClass, pluginClass)
-
-			// validate
-			confJson, _ := json.Marshal(conf)
-
-			validateUrl := fmt.Sprintf("http://%s:%s/connector-plugins/%s/config/validate", host, port, pluginClass)
-
-			req, err := http.NewRequest(http.MethodPut, validateUrl, bytes.NewBuffer(confJson))
-			cobra.CheckErr(err)
-
-			req.Header.Set("Content-Type", "application/json")
-
-			resp, err := http.DefaultClient.Do(req)
-			cobra.CheckErr(err)
-			respBodyBytes, _ := ioutil.ReadAll(resp.Body)
-
-			log.Debug("Got response status: ", resp.StatusCode)
-			//fmt.Fprintf(cmd.OutOrStdout(), "response %s, StatusCode %d\n", string(respBodyBytes), resp.StatusCode)
-			var validationResponse ValidationResponse
-
-			json.Unmarshal(respBodyBytes, &validationResponse)
-
-			fmt.Println(validationResponse)
-			// return ValidationResponse on a channel?
-
-			if validationResponse.ErrorCount == 0 {
-				fmt.Fprintf(cmd.OutOrStdout(), "config for %s is valid\n", validationResponse.Name)
+		// validate
+		for _, configFile := range configs {
+			if configFile.ValidationResp.ErrorCount == 0 {
+				fmt.Fprintf(cmd.OutOrStdout(), "config for %s [%s] is valid\n", configFile.ConnectorName, configFile.FileName)
 			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "config for %s is invalid, skipping loading\n", validationResponse.Name)
-				continue
+				fmt.Fprintf(cmd.OutOrStdout(), "config for %s [%s] is invalid, skipping loading\n", configFile.ConnectorName, configFile.FileName)
 			}
-			fmt.Println("loading connector")
+		}
+
+		if 1 == 2 {
+			fmt.Println("loading connectors")
 			// check response error_count = 0 means it is valid
 			// log any errors
 
 			// put to the config endpoint
-			loadUrl := fmt.Sprintf("http://%s:%s/connectors/%s/config", host, port, connectorName)
+			//loadUrl := fmt.Sprintf("http://%s:%s/connectors/%s/config", host, port, "woop")
 
-			req, err = http.NewRequest(http.MethodPut, loadUrl, bytes.NewBuffer(confJson))
-			cobra.CheckErr(err)
+			//req, err := http.NewRequest(http.MethodPut, loadUrl, bytes.NewBuffer(bytes("whhop")))
+			//cobra.CheckErr(err)
 
-			req.Header.Set("Content-Type", "application/json")
+			//req.Header.Set("Content-Type", "application/json")
 
-			resp, err = http.DefaultClient.Do(req)
-			cobra.CheckErr(err)
+			//resp, err := http.DefaultClient.Do(req)
+			//cobra.CheckErr(err)
 			//respBodyBytes, _ = ioutil.ReadAll(resp.Body)
 
-			log.Debug("Got response status: ", resp.StatusCode)
-			fmt.Println("loaded connector ", resp.StatusCode)
+			//log.Debug("Got response status: ", resp.StatusCode)
+			//fmt.Println("loaded connector ", resp.StatusCode)
 
 		}
 
 	},
 }
 
+func ValidateConfig(host string, port string, configFile ConfigFile) ValidationResponse {
+
+	validateUrl := fmt.Sprintf("http://%s:%s/connector-plugins/%s/config/validate", host, port, configFile.PluginClass)
+
+	req, err := http.NewRequest(http.MethodPut, validateUrl, bytes.NewBuffer(configFile.ConfigBytes))
+	cobra.CheckErr(err)
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	cobra.CheckErr(err)
+	respBodyBytes, _ := ioutil.ReadAll(resp.Body)
+
+	log.Debug("Got response status: ", resp.StatusCode)
+	//fmt.Fprintf(cmd.OutOrStdout(), "response %s, StatusCode %d\n", string(respBodyBytes), resp.StatusCode)
+	var validationResponse ValidationResponse
+
+	json.Unmarshal(respBodyBytes, &validationResponse)
+
+	// return ValidationResponse on a channel?
+
+	return validationResponse
+}
+
 type ValidationResponse struct {
-	Name       string
-	ErrorCount int `json:"error_count"`
-	Configs    []ValidationResponseField
+	ConnectorName string
+	Name          string
+	ErrorCount    int `json:"error_count"`
+	Configs       []ValidationResponseField
 }
 
 type ValidationResponseField struct {
@@ -168,8 +197,4 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// loadCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}
-
-func ValidateConfig(host string, port string, connectorName string) {
-
 }
