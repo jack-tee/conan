@@ -145,7 +145,6 @@ var loadCmd = &cobra.Command{
 			fmt.Fprintf(cmd.OutOrStdout(), "Validation errors found, skipping loading configs and exiting.\n")
 			os.Exit(1)
 		}
-
 	},
 }
 
