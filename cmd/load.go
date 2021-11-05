@@ -24,10 +24,24 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+const ValidationTemplate = `CONNECTORS: {{ len . }}
+{{ range $id, $file := . -}}
+{{ printf "%-30s" $file.ConnectorName }} {{ printf "%-50s" $file.FileName }}
+{{- if eq $file.ValidationResp.ErrorCount 0 -}} Valid {{- else -}} Invalid
+{{- range $i, $field := $file.ValidationResp.Configs -}}
+{{- if ne (len $field.Value.Errors) 0 }}
+Error    Field: {{ $field.Value.Name }} - {{ $field.Value.Errors }}
+{{- end -}}
+{{- end }}
+{{ end }}
+{{ end }}
+`
 
 type ConfigFile struct {
 	FileName       string
@@ -37,6 +51,10 @@ type ConfigFile struct {
 	Config         map[string]string
 	ConfigBytes    []byte
 	ValidationResp ValidationResponse
+	LoadResp       *http.Response
+}
+
+type LoadResponse struct {
 }
 
 func (cf *ConfigFile) Read() {
@@ -76,9 +94,10 @@ func (cf *ConfigFile) Read() {
 
 // loadCmd represents the load command
 var loadCmd = &cobra.Command{
-	Use:   "load",
-	Short: "Load connector config files into Kafka Connect",
-	Long:  `Load connector config files into Kafka Connect`,
+	Use:    "load",
+	Short:  "Load connector config files into Kafka Connect",
+	Long:   `Load connector config files into Kafka Connect`,
+	PreRun: toggleDebug,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if len(args) == 0 {
@@ -86,63 +105,65 @@ var loadCmd = &cobra.Command{
 			return
 		}
 
-		files := make([]string, 0)
+		// load the configs
+		files := make([]ConfigFile, 0)
 
 		for _, path := range args {
 			matches, err := filepath.Glob(path)
-			if err != nil || matches == nil {
+
+			cobra.CheckErr(err)
+
+			if matches == nil {
 				log.Warn("no files found for arg ", path)
+			} else {
+				log.Debug("for arg ", path, " found files ", matches)
+				for _, file := range matches {
+					configFile := ConfigFile{FileName: file}
+					configFile.Read()
+					files = append(files, configFile)
+				}
 			}
-			log.Debug("for arg ", path, " found files ", matches)
-			files = append(files, matches...)
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "loading files %s\n", files)
-
-		configs := make([]ConfigFile, 0)
-
-		for _, fileName := range files {
-			configFile := ConfigFile{FileName: fileName}
-			configFile.Read()
-
-			configFile.ValidationResp = ValidateConfig(host, port, configFile)
-			//fmt.Println(configFile)
-
-			configs = append(configs, configFile)
-		}
-		//fmt.Println(configs)
 
 		// validate
-		for _, configFile := range configs {
-			if configFile.ValidationResp.ErrorCount == 0 {
-				fmt.Fprintf(cmd.OutOrStdout(), "config for %s [%s] is valid\n", configFile.ConnectorName, configFile.FileName)
-			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "config for %s [%s] is invalid, skipping loading\n", configFile.ConnectorName, configFile.FileName)
+		valid := true
+		for i, file := range files {
+			files[i].ValidationResp = ValidateConfig(host, port, file)
+			if files[i].ValidationResp.ErrorCount > 0 {
+				valid = false
 			}
 		}
 
-		if 1 == 2 {
-			fmt.Println("loading connectors")
-			// check response error_count = 0 means it is valid
-			// log any errors
+		t := template.Must(template.New("").Parse(ValidationTemplate))
+		t.Execute(cmd.OutOrStdout(), files)
 
-			// put to the config endpoint
-			//loadUrl := fmt.Sprintf("http://%s:%s/connectors/%s/config", host, port, "woop")
-
-			//req, err := http.NewRequest(http.MethodPut, loadUrl, bytes.NewBuffer(bytes("whhop")))
-			//cobra.CheckErr(err)
-
-			//req.Header.Set("Content-Type", "application/json")
-
-			//resp, err := http.DefaultClient.Do(req)
-			//cobra.CheckErr(err)
-			//respBodyBytes, _ = ioutil.ReadAll(resp.Body)
-
-			//log.Debug("Got response status: ", resp.StatusCode)
-			//fmt.Println("loaded connector ", resp.StatusCode)
-
+		if valid {
+			for i, file := range files {
+				files[i].LoadResp = LoadConfig(host, port, file)
+			}
+		} else {
+			fmt.Fprintf(cmd.OutOrStdout(), "Validation errors found, skipping loading configs and exiting.\n")
+			os.Exit(1)
 		}
 
 	},
+}
+
+func LoadConfig(host string, port string, configFile ConfigFile) *http.Response {
+	validateUrl := fmt.Sprintf("http://%s:%s/connectors/%s/config", host, port, configFile.ConnectorName)
+
+	req, err := http.NewRequest(http.MethodPut, validateUrl, bytes.NewBuffer(configFile.ConfigBytes))
+	cobra.CheckErr(err)
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	cobra.CheckErr(err)
+	//respBodyBytes, _ := ioutil.ReadAll(resp.Body)
+
+	log.Debug("Put config for: ", configFile.ConnectorName, " got response status: ", resp.StatusCode)
+	return resp
+
 }
 
 func ValidateConfig(host string, port string, configFile ConfigFile) ValidationResponse {
