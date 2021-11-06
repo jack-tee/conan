@@ -17,24 +17,12 @@ package cmd
 
 import (
 	"strings"
-	"text/template"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var taskFilter string
-
-const ConnectorsTemplate = `CONNECTORS: {{ len . }}
-{{ range $id, $connector := . -}}
-    {{ $connector.Id }} {{ printf "%-80s" $connector.Name }} {{ $connector.Details.Connector.State }}
-    {{ range $task := $connector.Details.Tasks -}}
-        {{- printf "%d.%-4d" $connector.Id $task.Id -}} 
-        {{ printf "%-75.75s" $task.Summary }}
-        {{- printf "  %s  %s  %s"  $task.State $task.WorkerId $task.Trace }}
-    {{ end }}
-{{ end }}
-`
 
 type ConnectorStatus struct {
 	ConnectorId int
@@ -87,8 +75,8 @@ func List(cmd *cobra.Command, args []string) map[int]Connector {
 		log.Debug("connectors filtered by task-filter to ", connectors)
 	}
 
-	t := template.Must(template.New("").Parse(ConnectorsTemplate))
-	t.Execute(cmd.OutOrStdout(), connectors)
+	templates.ExecuteTemplate(cmd.OutOrStdout(), "ListTemplate", connectors)
+
 	return connectors
 }
 

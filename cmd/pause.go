@@ -24,11 +24,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type ConnectorMode string
+type Operation struct {
+	Mode       string
+	HttpMethod string
+	Endpoint   string
+}
 
-const (
-	Pause  ConnectorMode = "pause"
-	Resume ConnectorMode = "resume"
+var (
+	Pause  Operation = Operation{"pause", http.MethodPut, "pause"}
+	Resume Operation = Operation{"resume", http.MethodPut, "resume"}
+	Delete Operation = Operation{"delete", http.MethodDelete, ""}
 )
 
 var pauseCmd = &cobra.Command{
@@ -37,11 +42,7 @@ var pauseCmd = &cobra.Command{
 	Long:   `Pause connectors.`,
 	PreRun: toggleDebug,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		connectors := List(cmd, args)
-
-		executeConnectorOperation(cmd, connectors, Pause)
-
+		opCommand(cmd, Pause, args)
 	},
 }
 
@@ -51,19 +52,33 @@ var resumeCmd = &cobra.Command{
 	Long:   `Resume connectors.`,
 	PreRun: toggleDebug,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		connectors := List(cmd, args)
-
-		executeConnectorOperation(cmd, connectors, Resume)
+		opCommand(cmd, Resume, args)
 	},
+}
+
+var deleteCmd = &cobra.Command{
+	Use:    "delete",
+	Short:  "Delete connectors",
+	Long:   `Delete connectors.`,
+	PreRun: toggleDebug,
+	Run: func(cmd *cobra.Command, args []string) {
+		opCommand(cmd, Delete, args)
+	},
+}
+
+func opCommand(cmd *cobra.Command, op Operation, args []string) {
+	connectors := List(cmd, args)
+	executeConnectorOperation(cmd, connectors, op)
 }
 
 func init() {
 	rootCmd.AddCommand(pauseCmd)
 	rootCmd.AddCommand(resumeCmd)
+	rootCmd.AddCommand(deleteCmd)
 
 	pauseCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
 	resumeCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
+	deleteCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
 
 	// Here you will define your flags and configuration settings.
 
@@ -76,8 +91,8 @@ func init() {
 	// pauseCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func executeConnectorOperation(cmd *cobra.Command, connectors map[int]Connector, mode ConnectorMode) {
-	fmt.Fprintf(cmd.OutOrStdout(), "Enter a connectorId to %s it e.g 4, enter all to %s all LISTED connectors or q to quit:\n", mode, mode)
+func executeConnectorOperation(cmd *cobra.Command, connectors map[int]Connector, op Operation) {
+	fmt.Fprintf(cmd.OutOrStdout(), "Enter a connectorId to %s it e.g 4, enter all to %s all LISTED connectors or q to quit:\n", op.Mode, op.Mode)
 
 	connectorIdSelected := AwaitConnectorInput()
 
@@ -86,33 +101,34 @@ func executeConnectorOperation(cmd *cobra.Command, connectors map[int]Connector,
 		return
 
 	} else if connectorIdSelected == -2 {
-		fmt.Fprintf(cmd.OutOrStdout(), "%s all LISTED connectors? Enter y to confirm:\n", mode)
+		fmt.Fprintf(cmd.OutOrStdout(), "%s all LISTED connectors? Enter y to confirm:\n", op.Mode)
 
 		if AwaitUserConfirm() {
 			for id, connector := range connectors {
-				PutConnector(mode, host, port, connector.Name)
-				fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd.\n", id, connector.Name, mode)
+				ExecuteOp(op, host, port, connector.Name)
+				fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd.\n", id, connector.Name, op.Mode)
 			}
 		} else {
 			fmt.Fprintf(cmd.OutOrStdout(), "Quitting.\n")
+			return
 		}
 
 	} else if connectorSelected, ok := connectors[connectorIdSelected]; !ok {
 		fmt.Fprintf(cmd.OutOrStdout(), "ERROR. connectorId: [%d] not found in connectors. Exiting.\n", connectorIdSelected)
 
 	} else {
-		PutConnector(mode, host, port, connectorSelected.Name)
-		fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd.\n", connectorSelected.Id, connectorSelected.Name, mode)
+		ExecuteOp(op, host, port, connectorSelected.Name)
+		fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd.\n", connectorSelected.Id, connectorSelected.Name, op.Mode)
 	}
 }
 
-func PutConnector(mode ConnectorMode, host string, port string, connectorName string) {
+func ExecuteOp(op Operation, host string, port string, connectorName string) {
 	var emptyBody io.Reader = nil
 
-	pauseUrl := fmt.Sprintf("http://%s:%s/connectors/%s/%s", host, port, connectorName, mode)
-	log.Debug(mode, " connector with URL: ", pauseUrl)
+	opUrl := fmt.Sprintf("http://%s:%s/connectors/%s/%s", host, port, connectorName, op.Endpoint)
+	log.Debug(op.Mode, " connector with URL: ", opUrl)
 
-	req, err := http.NewRequest(http.MethodPut, pauseUrl, emptyBody)
+	req, err := http.NewRequest(op.HttpMethod, opUrl, emptyBody)
 	cobra.CheckErr(err)
 
 	resp, err := http.DefaultClient.Do(req)

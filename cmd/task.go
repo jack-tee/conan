@@ -1,7 +1,10 @@
 package cmd
 
 import (
-	"fmt"
+	"bytes"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 type TaskState struct {
@@ -13,17 +16,14 @@ type TaskState struct {
 }
 
 func (t TaskState) Summary() string {
-	if tables, ok := t.Config["tables"]; ok && tables != "" {
-		return tables
-
-	} else if query, ok := t.Config["query"]; ok && query != "" {
-		return query
-
-	} else if cpstopic, ok := t.Config["cps.topic"]; ok && cpstopic != "" {
-		topicsregex := t.Config["topics.regex"]
-		return fmt.Sprintf("%s -> %s", topicsregex, cpstopic)
-
-	} else {
+	tmpl := templates.Lookup(t.Config["connector.class"])
+	if tmpl == nil {
+		log.Debug("Template not found for ", t.Config["connector.class"])
 		return ""
 	}
+
+	var output bytes.Buffer
+	err := tmpl.ExecuteTemplate(&output, t.Config["connector.class"], t)
+	cobra.CheckErr(err)
+	return output.String()
 }
