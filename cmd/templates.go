@@ -17,14 +17,19 @@ LIST: {{ len . }} Connectors
 {{ define "ValidationTemplate" -}}
 VALIDATION: {{ len . }} Connectors
 {{ range $id, $file := . -}}
-{{ printf "%-30s" $file.ConnectorName }} {{ printf "%-50s" $file.FileName }}
-{{- if eq $file.ValidationResp.ErrorCount 0 -}} Valid {{- else -}} Invalid
-{{- range $i, $field := $file.ValidationResp.Configs -}}
-{{- if ne (len $field.Value.Errors) 0 }}
-    Error    Field: {{ $field.Value.Name }} - {{ $field.Value.Errors }}
+{{ printf "%-50s" $file.FileName }} {{ printf "%-30s" $file.ConnectorName }}
+{{- if and (eq $file.ValidationResp.ErrorCount 0) (eq $file.Error nil) -}} Config Valid. {{ if $file.LoadResp }} {{ $file.LoadResp.Status }} {{ end }}
+{{- else -}} Config Invalid.
+{{- if ne $file.Error nil }}
+    File Error {{ $file.Error }}
+{{- else -}}
+    {{- range $i, $field := $file.ValidationResp.Configs -}}
+    {{- if ne (len $field.Value.Errors) 0 }}
+        Config Error    Field: {{ $field.Value.Name }} - {{ $field.Value.Errors }}
+    {{- end -}}
+    {{- end }}
 {{- end -}}
 {{- end }}
-{{ end }}
 {{ end }}
 {{ end }}
 

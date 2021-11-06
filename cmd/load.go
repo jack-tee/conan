@@ -38,9 +38,7 @@ type ConfigFile struct {
 	ConfigBytes    []byte
 	ValidationResp ValidationResponse
 	LoadResp       *http.Response
-}
-
-type LoadResponse struct {
+	Error          error
 }
 
 func (cf *ConfigFile) Read() {
@@ -48,7 +46,12 @@ func (cf *ConfigFile) Read() {
 	byteValue, _ := ioutil.ReadAll(configFile)
 
 	var configObj map[string]interface{}
-	json.Unmarshal([]byte(byteValue), &configObj)
+	err := json.Unmarshal([]byte(byteValue), &configObj)
+
+	if err != nil {
+		cf.Error = err
+		return
+	}
 
 	connectorName := strings.Split(filepath.Base(cf.FileName), ".")[0]
 
@@ -112,24 +115,39 @@ var loadCmd = &cobra.Command{
 		}
 
 		// validate
-		valid := true
+		var allValid = true
 		for i, file := range files {
+
+			if file.Error != nil {
+				allValid = false
+				continue
+			}
+
 			files[i].ValidationResp = ValidateConfig(host, port, file)
 			if files[i].ValidationResp.ErrorCount > 0 {
-				valid = false
+				allValid = false
 			}
+
 		}
 
-		templates.ExecuteTemplate(cmd.OutOrStdout(), "ValidationTemplate", files)
-
-		if valid {
+		if allValid {
+			fmt.Fprintf(cmd.OutOrStdout(), "All connectors are valid loading configs.\n")
 			for i, file := range files {
 				files[i].LoadResp = LoadConfig(host, port, file)
 			}
-		} else {
-			fmt.Fprintf(cmd.OutOrStdout(), "Validation errors found, skipping loading configs and exiting.\n")
+		}
+
+		err := templates.ExecuteTemplate(cmd.OutOrStdout(), "ValidationTemplate", files)
+
+		if err != nil {
+			fmt.Fprintf(cmd.OutOrStdout(), "Error rendering ValidationTemplate template %e.\n", err)
 			os.Exit(1)
 		}
+		if !allValid {
+			fmt.Fprintf(cmd.OutOrStdout(), "Validation errors found, skipped loading configs and exiting.\n")
+			os.Exit(1)
+		}
+
 	},
 }
 
