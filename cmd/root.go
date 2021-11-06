@@ -16,6 +16,8 @@ limitations under the License.
 package cmd
 
 import (
+	"text/template"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -23,6 +25,7 @@ import (
 var host string
 var port string
 var debug bool
+var templates *template.Template
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -64,6 +67,10 @@ func toggleDebug(cmd *cobra.Command, args []string) {
 		log.SetLevel(log.DebugLevel)
 	}
 	log.SetFormatter(&log.TextFormatter{})
+
+	templates = template.Must(template.New("").Parse(defaultTemplates))
+	templates.ParseGlob("templates/*.tmpl")
+	log.Debug("Templates loaded are ", templates.DefinedTemplates())
 }
 
 // initConfig reads in config file and ENV variables if set.

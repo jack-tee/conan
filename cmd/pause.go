@@ -42,11 +42,7 @@ var pauseCmd = &cobra.Command{
 	Long:   `Pause connectors.`,
 	PreRun: toggleDebug,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		connectors := List(cmd, args)
-
-		executeConnectorOperation(cmd, connectors, Pause)
-
+		opCommand(cmd, Pause, args)
 	},
 }
 
@@ -56,10 +52,7 @@ var resumeCmd = &cobra.Command{
 	Long:   `Resume connectors.`,
 	PreRun: toggleDebug,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		connectors := List(cmd, args)
-
-		executeConnectorOperation(cmd, connectors, Resume)
+		opCommand(cmd, Resume, args)
 	},
 }
 
@@ -69,11 +62,13 @@ var deleteCmd = &cobra.Command{
 	Long:   `Delete connectors.`,
 	PreRun: toggleDebug,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		connectors := List(cmd, args)
-
-		executeConnectorOperation(cmd, connectors, Delete)
+		opCommand(cmd, Delete, args)
 	},
+}
+
+func opCommand(cmd *cobra.Command, op Operation, args []string) {
+	connectors := List(cmd, args)
+	executeConnectorOperation(cmd, connectors, op)
 }
 
 func init() {

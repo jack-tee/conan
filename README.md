@@ -65,8 +65,7 @@ CONNECTORS: 3
 ```
 
 
-
-## Pause/Resume Connectors
+## Pause/Resume/Delete Connectors
 
 You can pause or resume connectors
 
@@ -93,4 +92,48 @@ CONNECTORS: 1
 
 Enter a connectorId to pause it, enter all to pause all LISTED connectors or q to quit: 2
 Connector 2 an-example-pubsub-sink-connector paused.
+```
+
+Or delete them
+
+```
+conan delete pubsub
+
+CONNECTORS: 1 
+2 an-example-pubsub-sink-connector                              PAUSED
+    2.0    .* -> mypubsubtopic                                      PAUSED  10.0.0.3:8083
+
+Enter a connectorId to delete it, enter all to delete all LISTED connectors or q to quit: 2
+Connector 2 an-example-pubsub-sink-connector deleted.
+```
+
+## Loading connectors
+You can load and update connectors
+
+This command validates all connector configuration first and will then load the connectors if there are no errors reported.
+
+```
+> conan load connectors/*.json /another/path/myconnector.json
+
+CONNECTORS: 3
+my-bulk-connector              config/bulk.json                        Valid
+my-sink-connector              config/sink.json                        Valid
+my-other-connector             /another/path/myconnector.json          Valid
+
+```
+If there are errors they will be reported and no connectors will be loaded
+
+```
+CONNECTORS: 3
+my-sink-connector              config/sink.json                        Valid
+my-bulk-connector              config/bulk.json                        Invalid
+Error    Field: name - [Missing required configuration "name" which has no default value.]
+Error    Field: incrementing.column.name - [Query mode must be specified]
+Error    Field: timestamp.column.name - [Query mode must be specified]
+Error    Field: timestamp.initial - [Query mode must be specified]
+Error    Field: validate.non.null - [Query mode must be specified]
+
+my-other-connector             /another/path/myconnector.json          Valid
+
+Validation errors found, skipping the loading of configs and exiting.
 ```

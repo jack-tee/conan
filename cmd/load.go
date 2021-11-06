@@ -24,24 +24,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
-
-const ValidationTemplate = `CONNECTORS: {{ len . }}
-{{ range $id, $file := . -}}
-{{ printf "%-30s" $file.ConnectorName }} {{ printf "%-50s" $file.FileName }}
-{{- if eq $file.ValidationResp.ErrorCount 0 -}} Valid {{- else -}} Invalid
-{{- range $i, $field := $file.ValidationResp.Configs -}}
-{{- if ne (len $field.Value.Errors) 0 }}
-Error    Field: {{ $field.Value.Name }} - {{ $field.Value.Errors }}
-{{- end -}}
-{{- end }}
-{{ end }}
-{{ end }}
-`
 
 type ConfigFile struct {
 	FileName       string
@@ -134,8 +120,7 @@ var loadCmd = &cobra.Command{
 			}
 		}
 
-		t := template.Must(template.New("").Parse(ValidationTemplate))
-		t.Execute(cmd.OutOrStdout(), files)
+		templates.ExecuteTemplate(cmd.OutOrStdout(), "ValidationTemplate", files)
 
 		if valid {
 			for i, file := range files {
