@@ -137,3 +137,40 @@ my-other-connector             /another/path/myconnector.json          Valid
 
 Validation errors found, skipping the loading of configs and exiting.
 ```
+
+## Templated output
+It is possible to override or add to the console output for most commands.
+
+A common use case for this is to make the task summary more relevant to each connector.
+
+For example if you were using a `org.apache.kafka.connect.file.FileStreamSinkConnector` by default you would get output from the `list` command like
+
+```
+> conan list
+
+CONNECTORS: 1
+0 my-file-sink                                                  RUNNING
+    0.0                                                             RUNNING  10.0.0.1:8083
+```
+It tells you it's running but not much else, we can modify what it tells us about a task using templates.
+
+So if we create a templates/task_summary.tmpl (relative to the conan binary) file that looks something like:
+```
+{{ define "org.apache.kafka.connect.file.FileStreamSinkConnector" }}
+{{ index .Config "topic" }} -> {{ index .Config "file" }}
+{{ end }}
+```
+Now when we run `conan list` the output should be:
+```
+CONNECTORS: 1
+0 my-file-sink                                                  RUNNING
+    0.0 my.topic -> /tmp/myfile.txt                                 RUNNING  10.0.0.1:8083
+```
+This can then also be used to filter tasks, with the above template in place you can find the task that is writing to a specific file
+```
+> conan list -t myfile
+
+CONNECTORS: 1
+0 my-file-sink                                                  RUNNING
+    0.0 my.topic -> /tmp/myfile.txt                                 RUNNING  10.0.0.1:8083
+```
