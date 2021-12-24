@@ -26,6 +26,7 @@ var host string
 var port string
 var debug bool
 var templates *template.Template
+var templatesPath string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -55,10 +56,11 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
 	rootCmd.PersistentFlags().StringVarP(&host, "host", "H", "localhost", "the Kafka Connect rest api host")
 	rootCmd.PersistentFlags().StringVarP(&port, "port", "p", "8083", "the Kafka Connect rest api port")
+	rootCmd.PersistentFlags().StringVar(&templatesPath, "templatesPath", "templates/*.tmpl", "path to output templates")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
 }
 
 func toggleDebug(cmd *cobra.Command, args []string) {
@@ -69,8 +71,10 @@ func toggleDebug(cmd *cobra.Command, args []string) {
 	log.SetFormatter(&log.TextFormatter{})
 
 	templates = template.Must(template.New("").Parse(defaultTemplates))
-	templates.ParseGlob("templates/*.tmpl")
-	log.Debug("Templates loaded are ", templates.DefinedTemplates())
+	log.Debug("Loading templates using path ", templatesPath)
+	templates.ParseGlob(templatesPath)
+
+	log.Debug("Templates loaded.", templates.DefinedTemplates())
 }
 
 // initConfig reads in config file and ENV variables if set.

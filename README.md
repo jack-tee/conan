@@ -154,14 +154,25 @@ CONNECTORS: 1
 ```
 It tells you it's running but not much else, we can modify what it tells us about a task using templates.
 
-So if we create a templates/task_summary.tmpl (relative to the conan binary) file that looks something like:
+So if we create a templates/task_summary.tmpl file that looks something like:
 ```
 {{ define "org.apache.kafka.connect.file.FileStreamSinkConnector" }}
 {{ index .Config "topic" }} -> {{ index .Config "file" }}
 {{ end }}
 ```
-Now when we run `conan list` the output should be:
+Now we can pass this file as the `--templatesPath` argument which allows a glob path for where to look for template files.
+
+> Note the default value for templatesPath is `templates/*.tmpl` so you can omit this argument if you place your template files in this directory relative to the path where conan is run from.
+
 ```
+conan list --templatesPath templates/task_summary.tmpl -d
+
+...
+DEBU[0000] Loading templates using path templates/task_summary.tmpl 
+DEBU[0000] Templates loaded.; defined templates are: "org.apache.kafka.connect.file.FileStreamSinkConnector", "ListTemplate", "ValidationTemplate", "io.confluent.connect.jdbc.JdbcSourceConnector"
+...
+
+
 CONNECTORS: 1
 0 my-file-sink                                                  RUNNING
     0.0 my.topic -> /tmp/myfile.txt                                 RUNNING  10.0.0.1:8083
