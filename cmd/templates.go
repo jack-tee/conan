@@ -46,6 +46,14 @@ n/a
 
 
 {{ define "com.google.pubsub.kafka.sink.CloudPubSubSinkConnector" }}
-{{ index .Config "topics" }} -> {{ index .Config "cps.topic" }}
+{{- index .Config "topics" }} -> {{ index .Config "cps.topic" -}}
+{{ end }}
+
+{{ define "com.google.pubsub.kafka.source.CloudPubSubSourceConnector" }}
+{{- index .Config "cps.subscription" }} -> {{ index .Config "kafka.topic" -}}
+{{ end }}
+
+{{ define "org.apache.kafka.connect.mirror.MirrorSourceConnector" }}
+{{- index .Config "topics" }} with prefix {{ index .Config "source.cluster.alias" -}}
 {{ end }}
 `
