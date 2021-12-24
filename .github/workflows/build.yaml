@@ -39,16 +39,20 @@ jobs:
     outputs:
       tag: ${{ steps.tag_version.outputs.new_tag }}
 
-  release:
+  releases:
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin]
+        goarch: [amd64]
     steps:
     - uses: actions/checkout@v2
     - uses: wangyoucao577/go-release-action@v1.22
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        goos: linux
-        goarch: amd64
+        goos: ${{ matrix goos }}
+        goarch: ${{ matrix.goarch }}
         goversion: 1.15
         release_tag: ${{ needs.build.outputs.tag }}
 
