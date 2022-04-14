@@ -4,15 +4,20 @@ const defaultTemplates = `
 {{ define "ListTemplate" -}}
 LIST: {{ len . }} Connectors
 {{ range $id, $connector := . -}}
-    {{ $connector.Id }} {{ printf "%-80s" $connector.Name }} {{ $connector.Details.Connector.State }}
+    {{ printf "%-3d %-78s" $connector.Id $connector.Name }} {{ printf "%-11s" $connector.Details.Connector.State }} {{ $connector.PollInterval }}
     {{ range $task := $connector.Details.Tasks -}}
-        {{- printf "%d.%-4d" $connector.Id $task.Id -}} 
+        {{- printf "%3d.%-2d" $connector.Id $task.Id -}} 
         {{ printf "%-75.75s" $task.Summary }}
-        {{- printf "  %s  %s  %s"  $task.State $task.WorkerId $task.Trace }}
+        {{- printf " %8s %s  %s"  $task.State $task.WorkerId $task.Trace }}
     {{ end }}
 {{ end }}
 {{ end }}
 
+{{ define "StateListTemplate" -}}
+{{ range $id, $connector := . -}}
+    {{ printf "%s" $connector.Name }},{{ $connector.Details.Connector.State }}
+{{ end }}
+{{ end }}
 
 {{ define "ValidationTemplate" -}}
 VALIDATION: {{ len . }} Connectors
