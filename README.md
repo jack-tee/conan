@@ -3,7 +3,7 @@ A simple <span style="color:#3a9025">Con</span>nector M<span style="color:#3a902
 
 Mainly aimed at managing JDBC Source Connectors.
 
-## List connectors
+## List Connectors
 
 The list command provides a summary of each task, returning the `tables` or `query` config parameter to make it easy to identify each task.
 ```
@@ -107,7 +107,7 @@ Enter a connectorId to delete it, enter all to delete all LISTED connectors or q
 Connector 2 an-example-pubsub-sink-connector deleted.
 ```
 
-## Loading connectors
+## Loading Connectors
 You can load and update connectors
 
 This command validates all connector configuration first and will then load the connectors if there are no errors reported.
@@ -138,7 +138,46 @@ my-other-connector             /another/path/myconnector.json          Valid
 Validation errors found, skipping the loading of configs and exiting.
 ```
 
-## Templated output
+## Saving and Setting Connector State
+
+Imagine the scenario where you have many connectors running and you need to pause a chunk of them for whatever reason and then want to return to the previous state. Conan can save the current state of all connectors using
+
+```
+> conan state save 
+```
+
+or
+
+```
+> conan state save mystatefile
+```
+
+You'd then pause whichever connectors you need to, e.g
+
+```
+> conan pause db1
+
+...
+
+Connector 2 db1-table1-connector paused.
+Connector 2 db1-table2-connector paused.
+Connector 2 db1-table3-connector paused.
+
+```
+
+Then set the connector state back to your saved state file
+
+```
+> conan state set mystatefile
+
+setting connector state for db1-table1-connector to RUNNING
+setting connector state for db1-table2-connector to RUNNING
+setting connector state for db1-table3-connector to RUNNING
+
+```
+
+
+## Templated Output
 It is possible to override or add to the console output for most commands.
 
 A common use case for this is to make the task summary more relevant to each connector.
