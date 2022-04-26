@@ -4,11 +4,11 @@ const defaultTemplates = `
 {{ define "ListTemplate" -}}
 LIST: {{ len . }} Connectors
 {{ range $id, $connector := . -}}
-    {{ printf "%-3d %-78s" $connector.Id $connector.Name }} {{ printf "%-11s" $connector.Details.Connector.State }} {{ $connector.PollInterval }}
+    {{ printf "%-3d %-78s" $connector.Id $connector.Name }} {{ printf "%-11s" $connector.Details.Connector.FormattedState }} {{ $connector.PollInterval }}
     {{ range $task := $connector.Details.Tasks -}}
         {{- printf "%3d.%-2d" $connector.Id $task.Id -}} 
         {{ printf "%-75.75s" $task.Summary }}
-        {{- printf " %8s %s  %s"  $task.State $task.WorkerId $task.Trace }}
+        {{- printf " %8s %s  %s"  $task.FormattedState $task.WorkerId $task.Trace }}
     {{ end }}
 {{ end }}
 {{ end }}

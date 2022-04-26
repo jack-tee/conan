@@ -27,3 +27,7 @@ func (t TaskState) Summary() string {
 	cobra.CheckErr(err)
 	return output.String()
 }
+
+func (t TaskState) FormattedState() string {
+	return FormatState(t.State)
+}

@@ -80,6 +80,10 @@ type ConnectorState struct {
 	WorkerId string `json:"worker_id"`
 }
 
+func (c ConnectorState) FormattedState() string {
+	return FormatState(c.State)
+}
+
 // GetConnectorDetails gets all connector and task statuses and config for a given connectorName
 func GetConnectorDetails(host string, port string, connectorId int, connectorName string) ConnectorDetails {
 	log.Debug("getting connector details for ", connectorId, " ", connectorName)
