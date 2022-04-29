@@ -31,9 +31,10 @@ type Operation struct {
 }
 
 var (
-	Pause  Operation = Operation{"pause", http.MethodPut, "pause"}
-	Resume Operation = Operation{"resume", http.MethodPut, "resume"}
-	Delete Operation = Operation{"delete", http.MethodDelete, ""}
+	Pause   Operation = Operation{"pause", http.MethodPut, "pause"}
+	Resume  Operation = Operation{"resume", http.MethodPut, "resume"}
+	Delete  Operation = Operation{"delete", http.MethodDelete, ""}
+	Restart Operation = Operation{"restart", http.MethodPost, "restart"}
 )
 
 var pauseCmd = &cobra.Command{
@@ -66,6 +67,16 @@ var deleteCmd = &cobra.Command{
 	},
 }
 
+var restartCmd = &cobra.Command{
+	Use:    "restart",
+	Short:  "Restart connectors",
+	Long:   `Restart connectors.`,
+	PreRun: toggleDebug,
+	Run: func(cmd *cobra.Command, args []string) {
+		opCommand(cmd, Restart, args)
+	},
+}
+
 func opCommand(cmd *cobra.Command, op Operation, args []string) {
 	connectors := List(cmd, args)
 	executeConnectorOperation(cmd, connectors, op)
@@ -75,10 +86,12 @@ func init() {
 	rootCmd.AddCommand(pauseCmd)
 	rootCmd.AddCommand(resumeCmd)
 	rootCmd.AddCommand(deleteCmd)
+	rootCmd.AddCommand(restartCmd)
 
 	pauseCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
 	resumeCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
 	deleteCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
+	restartCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
 
 	// Here you will define your flags and configuration settings.
 
