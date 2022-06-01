@@ -161,8 +161,8 @@ func LoadConfig(host string, port string, configFile ConfigFile) *http.Response 
 
 	resp, err := http.DefaultClient.Do(req)
 	cobra.CheckErr(err)
-	//respBodyBytes, _ := ioutil.ReadAll(resp.Body)
-
+	respBodyBytes, _ := ioutil.ReadAll(resp.Body)
+	log.Debug(string(respBodyBytes))
 	log.Debug("Put config for: ", configFile.ConnectorName, " got response status: ", resp.StatusCode)
 	return resp
 

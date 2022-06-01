@@ -116,10 +116,10 @@ var setCmd = &cobra.Command{
 							} else {
 								switch connStatus[1] {
 								case "PAUSED":
-									ExecuteOp(Pause, host, port, string(connStatus[0]))
+									ExecuteConnectorOp(Pause, host, port, string(connStatus[0]))
 									log.Info(fmt.Sprintf("setting connector state for %s to PAUSED\n", string(connStatus[0])))
 								case "RUNNING":
-									ExecuteOp(Resume, host, port, string(connStatus[0]))
+									ExecuteConnectorOp(Resume, host, port, string(connStatus[0]))
 									log.Info(fmt.Sprintf("setting connector state for %s to RUNNING\n", string(connStatus[0])))
 								default:
 									log.Warn(fmt.Sprintf("skipping connector state for %s because desired state is %s existing state is %s", string(connStatus[0]), string(connStatus[1]), existingState))

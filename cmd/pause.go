@@ -31,6 +31,12 @@ type Operation struct {
 }
 
 var (
+	allTasks    bool = false
+	failedTasks bool = false
+	onlyTasks   bool = false
+)
+
+var (
 	Pause   Operation = Operation{"pause", http.MethodPut, "pause"}
 	Resume  Operation = Operation{"resume", http.MethodPut, "resume"}
 	Delete  Operation = Operation{"delete", http.MethodDelete, ""}
@@ -92,6 +98,9 @@ func init() {
 	resumeCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
 	deleteCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
 	restartCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
+	restartCmd.Flags().BoolVar(&allTasks, "all-tasks", false, "also restart the connector's tasks")
+	restartCmd.Flags().BoolVar(&failedTasks, "failed-tasks", true, "also restart the connector's failed tasks")
+	restartCmd.Flags().BoolVar(&onlyTasks, "only-tasks", false, "also restart the connector's failed tasks")
 
 	// Here you will define your flags and configuration settings.
 
@@ -118,7 +127,7 @@ func executeConnectorOperation(cmd *cobra.Command, connectors map[int]Connector,
 
 		if AwaitUserConfirm() {
 			for id, connector := range connectors {
-				ExecuteOp(op, host, port, connector.Name)
+				ExecuteOp(op, host, port, connector)
 				fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd.\n", id, connector.Name, op.Mode)
 			}
 		} else {
@@ -130,12 +139,44 @@ func executeConnectorOperation(cmd *cobra.Command, connectors map[int]Connector,
 		fmt.Fprintf(cmd.OutOrStdout(), "ERROR. connectorId: [%d] not found in connectors. Exiting.\n", connectorIdSelected)
 
 	} else {
-		ExecuteOp(op, host, port, connectorSelected.Name)
+		ExecuteOp(op, host, port, connectorSelected)
 		fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd.\n", connectorSelected.Id, connectorSelected.Name, op.Mode)
 	}
 }
 
-func ExecuteOp(op Operation, host string, port string, connectorName string) {
+func ExecuteOp(op Operation, host string, port string, connector Connector) {
+
+	if !onlyTasks {
+		// operate on the connector
+		ExecuteConnectorOp(op, host, port, connector.Name)
+	}
+
+	if op == Restart && (onlyTasks || allTasks || failedTasks) {
+		// restart the tasks
+		for _, task := range connector.Details.Tasks {
+
+			if task.State != "FAILED" && !allTasks {
+				log.Debug("skipping %s of task %s for connector %s", op.Endpoint, task.Id, connector.Name)
+				continue
+			}
+
+			var emptyBody io.Reader = nil
+			// restart the task
+			opUrl := fmt.Sprintf("http://%s:%s/connectors/%s/tasks/%d/%s", host, port, connector.Name, task.Id, op.Endpoint)
+			log.Debug(op.Mode, " task with URL: ", opUrl)
+
+			req, err := http.NewRequest(op.HttpMethod, opUrl, emptyBody)
+			cobra.CheckErr(err)
+
+			resp, err := http.DefaultClient.Do(req)
+			cobra.CheckErr(err)
+			log.Debug("Got response status: ", resp.StatusCode)
+
+		}
+	}
+}
+
+func ExecuteConnectorOp(op Operation, host string, port string, connectorName string) {
 	var emptyBody io.Reader = nil
 
 	opUrl := fmt.Sprintf("http://%s:%s/connectors/%s/%s", host, port, connectorName, op.Endpoint)
@@ -147,5 +188,4 @@ func ExecuteOp(op Operation, host string, port string, connectorName string) {
 	resp, err := http.DefaultClient.Do(req)
 	cobra.CheckErr(err)
 	log.Debug("Got response status: ", resp.StatusCode)
-
 }
