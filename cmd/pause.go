@@ -123,13 +123,13 @@ func init() {
 func executeConnectorOperation(cmd *cobra.Command, connectors map[int]Connector, op Operation) {
 	fmt.Fprintf(cmd.OutOrStdout(), "Enter a connectorId to %s it e.g 4, enter all to %s all LISTED connectors or q to quit:\n", op.Mode, op.Mode)
 
-	connectorIdSelected := AwaitConnectorInput()
+	quit, opAll, connectorIdsSelected := AwaitConnectorInput()
 
-	if connectorIdSelected == -1 {
+	if quit {
 		fmt.Fprintf(cmd.OutOrStdout(), "Quitting.\n")
 		return
 
-	} else if connectorIdSelected == -2 {
+	} else if opAll {
 		fmt.Fprintf(cmd.OutOrStdout(), "%s all LISTED connectors? Enter y to confirm:\n", op.Mode)
 
 		if AwaitUserConfirm() {
@@ -142,12 +142,15 @@ func executeConnectorOperation(cmd *cobra.Command, connectors map[int]Connector,
 			return
 		}
 
-	} else if connectorSelected, ok := connectors[connectorIdSelected]; !ok {
-		fmt.Fprintf(cmd.OutOrStdout(), "ERROR. connectorId: [%d] not found in connectors. Exiting.\n", connectorIdSelected)
-
 	} else {
-		ExecuteOp(op, host, port, connectorSelected)
-		fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd.\n", connectorSelected.Id, connectorSelected.Name, op.Mode)
+		for _, connectorIdSelected := range connectorIdsSelected {
+			if connectorSelected, ok := connectors[connectorIdSelected]; !ok {
+				fmt.Fprintf(cmd.OutOrStdout(), "ERROR. connectorId: [%d] not found in connectors. Skipping.\n", connectorIdSelected)
+			} else {
+				ExecuteOp(op, host, port, connectorSelected)
+				fmt.Fprintf(cmd.OutOrStdout(), "Connector %d %s %sd.\n", connectorSelected.Id, connectorSelected.Name, op.Mode)
+			}
+		}
 	}
 }
 

@@ -36,7 +36,7 @@ func AwaitUserConfirm() bool {
 // A connector can be selected by entering a connector id e.g
 // > 4
 // Which will result in a return value of 4
-func AwaitConnectorInput() int {
+func AwaitConnectorInput() (bool, bool, []int) {
 
 	selected := "-1"
 	fmt.Scanln(&selected)
@@ -44,24 +44,26 @@ func AwaitConnectorInput() int {
 
 	if strings.Contains(selected, "q") {
 		log.Debug("found 'q' in input so exiting")
-		return -1
+		return true, false, nil
 	}
 
 	if strings.Contains(selected, "all") {
 		log.Debug("found 'all' in input so exiting")
-		return -2
+		return false, true, nil
 	}
 
-	var connectorIdSelected int = -1
-	var err error
+	var connectorIdsSelected []int
 
-	connectorIdSelected, err = strconv.Atoi(selected)
-	if err != nil {
-		panic("could not parse connector id from selected")
+	for _, c := range strings.Split(selected, ",") {
+		c_int, err := strconv.Atoi(c)
+		if err != nil {
+			panic("could not parse connector id from selected")
+		}
+		connectorIdsSelected = append(connectorIdsSelected, c_int)
 	}
 
-	log.Debug("parsed user input from [%s] connectorId: %d", selected, connectorIdSelected)
-	return connectorIdSelected
+	log.Debug("parsed user input from [%s] connectorId: %s", selected, connectorIdsSelected)
+	return false, false, connectorIdsSelected
 }
 
 // AwaitConnectorTaskInput prompts the user for input
