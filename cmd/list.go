@@ -23,6 +23,7 @@ import (
 )
 
 var taskFilter string
+var stateFilter string
 
 type ConnectorStatus struct {
 	ConnectorId int
@@ -61,6 +62,24 @@ func List(cmd *cobra.Command, args []string) map[int]Connector {
 
 	connectors = GetConnectorsDetails(host, port, connectors)
 
+	if stateFilter != "" {
+		filteredConnectors := make(map[int]Connector)
+		for i, c := range connectors {
+			if strings.EqualFold(c.Details.Connector.State, stateFilter) {
+				filteredConnectors[i] = c
+			} else {
+				for _, t := range c.Details.Tasks {
+					if strings.EqualFold(t.State, stateFilter) {
+						filteredConnectors[i] = c
+					}
+				}
+			}
+		}
+
+		connectors = filteredConnectors
+		log.Debug("connectors filtered by state-filter to ", connectors)
+	}
+
 	if taskFilter != "" {
 		filteredConnectors := make(map[int]Connector)
 		for i, c := range connectors {
@@ -84,6 +103,7 @@ func init() {
 	//fmt.Println("Running list.go init")
 	rootCmd.AddCommand(listCmd)
 	listCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
+	listCmd.Flags().StringVarP(&stateFilter, "state-filter", "s", "", "filter to connectors / tasks in this state")
 
 	// Here you will define your flags and configuration settings.
 

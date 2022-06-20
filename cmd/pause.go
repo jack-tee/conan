@@ -95,9 +95,16 @@ func init() {
 	rootCmd.AddCommand(restartCmd)
 
 	pauseCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
+	pauseCmd.Flags().StringVarP(&stateFilter, "state-filter", "s", "", "filter to connectors / tasks in this state")
+
 	resumeCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
+	resumeCmd.Flags().StringVarP(&stateFilter, "state-filter", "s", "", "filter to connectors / tasks in this state")
+
 	deleteCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
+	deleteCmd.Flags().StringVarP(&stateFilter, "state-filter", "s", "", "filter to connectors / tasks in this state")
+
 	restartCmd.Flags().StringVarP(&taskFilter, "task-filter", "t", "", "a substring to filter task summaries by")
+	restartCmd.Flags().StringVarP(&stateFilter, "state-filter", "s", "", "filter to connectors / tasks in this state")
 	restartCmd.Flags().BoolVar(&allTasks, "all-tasks", false, "also restart the connector's tasks")
 	restartCmd.Flags().BoolVar(&failedTasks, "failed-tasks", true, "also restart the connector's failed tasks")
 	restartCmd.Flags().BoolVar(&onlyTasks, "only-tasks", false, "also restart the connector's failed tasks")
