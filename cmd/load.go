@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -57,20 +58,35 @@ func (cf *ConfigFile) Read() {
 
 	var conf = make(map[string]string)
 
-	if _, ok := configObj["config"]; ok {
-		configConnectorName := configObj["name"].(string)
-		if configConnectorName != connectorName {
-			log.Warn("connector name [", configConnectorName, "] in file [", cf.FileName, "] does not match filename")
-		}
-		connectorName = configConnectorName
+	// check the configured name matches the filename
+	configConnectorName := configObj["name"].(string)
+	if configConnectorName != connectorName {
+		log.Warnf("connector name [%s] does not match the name of the file [%s]", configConnectorName, cf.FileName)
+	}
+	connectorName = configConnectorName
 
+	// if there is a config sub object use it
+	if _, ok := configObj["config"]; ok {
 		configObj = configObj["config"].(map[string]interface{})
 	}
+
 	cf.ConnectorName = connectorName
 
 	for k, v := range configObj {
-		conf[k] = v.(string)
+
+		switch t := v.(type) {
+		case int:
+			conf[k] = strconv.Itoa(t)
+		case string:
+			conf[k] = t
+		case float64:
+			conf[k] = strings.Trim(strings.Trim(fmt.Sprintf("%f", t), "0"), ".")
+		default:
+			log.Errorf("type of value for key %s is not understood", k)
+		}
+
 	}
+	log.Debugf("Conf is: %+v", conf)
 	cf.Config = conf
 
 	cf.ConnectorClass = cf.Config["connector.class"]

@@ -23,7 +23,7 @@ LIST: {{ len . }} Connectors
 VALIDATION: {{ len . }} Connectors
 {{ range $id, $file := . -}}
 {{ printf "%-50s" $file.FileName }} {{ printf "%-30s" $file.ConnectorName }}
-{{- if and (eq $file.ValidationResp.ErrorCount 0) (eq $file.Error nil) -}} Config Valid. {{ if $file.LoadResp }} {{ $file.LoadResp.Status }} {{ end }}
+{{- if and (eq $file.ValidationResp.ErrorCount 0) (eq $file.Error nil) -}} Config Valid. {{ if $file.LoadResp }}Load response: {{ $file.LoadResp.Status }} {{ end }}
 {{- else -}} Config Invalid.
 {{- if ne $file.Error nil }}
     File Error {{ $file.Error }}
