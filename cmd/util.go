@@ -19,6 +19,10 @@ func GetPersistentFlags(cmd *cobra.Command) (string, string) {
 	return host, port
 }
 
+func HasCaseInsensitivePrefix(s string, prefix string) bool {
+	return strings.HasPrefix(strings.ToLower(s), strings.ToLower(prefix))
+}
+
 func AwaitUserConfirm() bool {
 	input := "n"
 	fmt.Scanln(&input)
@@ -62,7 +66,7 @@ func AwaitConnectorInput() (bool, bool, []int) {
 		connectorIdsSelected = append(connectorIdsSelected, c_int)
 	}
 
-	log.Debug("parsed user input from [%s] connectorId: %s", selected, connectorIdsSelected)
+	log.Debugf("parsed user input from [%s] connectorId: %v", selected, connectorIdsSelected)
 	return false, false, connectorIdsSelected
 }
 
@@ -102,7 +106,7 @@ func AwaitConnectorTaskInput() (int, int) {
 			panic("could not parse connector id from selected")
 		}
 	}
-	log.Debug("parsed user input from [%s] connectorId: %d taskId: %d", selected, connectorIdSelected, taskIdSelected)
+	log.Debugf("parsed user input from [%s] connectorId: %d taskId: %d", selected, connectorIdSelected, taskIdSelected)
 	return connectorIdSelected, taskIdSelected
 }
 

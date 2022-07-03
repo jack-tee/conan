@@ -166,7 +166,7 @@ func ExecuteOp(op Operation, host string, port string, connector Connector) {
 		for _, task := range connector.Details.Tasks {
 
 			if task.State != "FAILED" && !allTasks {
-				log.Debug("skipping %s of task %s for connector %s", op.Endpoint, task.Id, connector.Name)
+				log.Debugf("skipping %s of task %d for connector %s", op.Endpoint, task.Id, connector.Name)
 				continue
 			}
 

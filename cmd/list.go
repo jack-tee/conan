@@ -65,11 +65,11 @@ func List(cmd *cobra.Command, args []string) map[int]Connector {
 	if stateFilter != "" {
 		filteredConnectors := make(map[int]Connector)
 		for i, c := range connectors {
-			if strings.EqualFold(c.Details.Connector.State, stateFilter) {
+			if HasCaseInsensitivePrefix(c.Details.Connector.State, stateFilter) {
 				filteredConnectors[i] = c
 			} else {
 				for _, t := range c.Details.Tasks {
-					if strings.EqualFold(t.State, stateFilter) {
+					if HasCaseInsensitivePrefix(t.State, stateFilter) {
 						filteredConnectors[i] = c
 					}
 				}
