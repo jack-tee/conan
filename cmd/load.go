@@ -25,7 +25,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
+	retryablehttp "github.com/hashicorp/go-retryablehttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -130,6 +132,10 @@ var loadCmd = &cobra.Command{
 			}
 		}
 
+		rhttp := retryablehttp.NewClient()
+		rhttp.RetryMax = 3
+		rhttp.RetryWaitMin = time.Duration(5 * time.Second)
+
 		// validate
 		var allValid = true
 		for i, file := range files {
@@ -139,7 +145,7 @@ var loadCmd = &cobra.Command{
 				continue
 			}
 
-			files[i].ValidationResp = ValidateConfig(host, port, file)
+			files[i].ValidationResp = ValidateConfig(rhttp, host, port, file)
 			if files[i].ValidationResp.ErrorCount > 0 {
 				allValid = false
 			}
@@ -149,7 +155,7 @@ var loadCmd = &cobra.Command{
 		if allValid {
 			fmt.Fprintf(cmd.OutOrStdout(), "All connectors are valid loading configs.\n")
 			for i, file := range files {
-				files[i].LoadResp = LoadConfig(host, port, file)
+				files[i].LoadResp = LoadConfig(rhttp, host, port, file)
 			}
 		}
 
@@ -167,33 +173,33 @@ var loadCmd = &cobra.Command{
 	},
 }
 
-func LoadConfig(host string, port string, configFile ConfigFile) *http.Response {
+func LoadConfig(client *retryablehttp.Client, host string, port string, configFile ConfigFile) *http.Response {
 	validateUrl := fmt.Sprintf("http://%s:%s/connectors/%s/config", host, port, configFile.ConnectorName)
 
-	req, err := http.NewRequest(http.MethodPut, validateUrl, bytes.NewBuffer(configFile.ConfigBytes))
+	req, err := retryablehttp.NewRequest(http.MethodPut, validateUrl, bytes.NewBuffer(configFile.ConfigBytes))
 	cobra.CheckErr(err)
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	cobra.CheckErr(err)
 	respBodyBytes, _ := ioutil.ReadAll(resp.Body)
 	log.Debug(string(respBodyBytes))
-	log.Debug("Put config for: ", configFile.ConnectorName, " got response status: ", resp.StatusCode)
+	log.Info("Put config for: ", configFile.ConnectorName, " got response status: ", resp.Status, " and code: ", resp.StatusCode)
 	return resp
 
 }
 
-func ValidateConfig(host string, port string, configFile ConfigFile) ValidationResponse {
+func ValidateConfig(client *retryablehttp.Client, host string, port string, configFile ConfigFile) ValidationResponse {
 
 	validateUrl := fmt.Sprintf("http://%s:%s/connector-plugins/%s/config/validate", host, port, configFile.PluginClass)
 
-	req, err := http.NewRequest(http.MethodPut, validateUrl, bytes.NewBuffer(configFile.ConfigBytes))
+	req, err := retryablehttp.NewRequest(http.MethodPut, validateUrl, bytes.NewBuffer(configFile.ConfigBytes))
 	cobra.CheckErr(err)
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	cobra.CheckErr(err)
 	respBodyBytes, _ := ioutil.ReadAll(resp.Body)
 
