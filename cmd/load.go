@@ -108,7 +108,7 @@ var loadCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if len(args) == 0 {
-			fmt.Fprintf(cmd.OutOrStdout(), "No paths found.\n")
+			fmt.Fprintf(cmd.OutOrStdout(), "No args provided. Please provide paths to the configuration files to load e.g > conan load /conf/conf.json /otherconf/*.json\n")
 			return
 		}
 
@@ -132,6 +132,11 @@ var loadCmd = &cobra.Command{
 			}
 		}
 
+		if len(files) == 0 {
+			fmt.Fprintf(cmd.OutOrStdout(), "No configuration files found for provided paths.\n")
+			return
+		}
+
 		rhttp := retryablehttp.NewClient()
 		rhttp.RetryMax = 3
 		rhttp.RetryWaitMin = time.Duration(5 * time.Second)
@@ -153,7 +158,7 @@ var loadCmd = &cobra.Command{
 		}
 
 		if allValid {
-			fmt.Fprintf(cmd.OutOrStdout(), "All connectors are valid loading configs.\n")
+			fmt.Fprintf(cmd.OutOrStdout(), "All connectors are valid. Loading configs.\n")
 			for i, file := range files {
 				files[i].LoadResp = LoadConfig(rhttp, host, port, file)
 			}
@@ -166,7 +171,7 @@ var loadCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		if !allValid {
-			fmt.Fprintf(cmd.OutOrStdout(), "Validation errors found, skipped loading configs and exiting.\n")
+			fmt.Fprintf(cmd.OutOrStdout(), "Validation errors found, skipped loading configs.\n")
 			os.Exit(1)
 		}
 
