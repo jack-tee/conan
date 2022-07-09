@@ -107,7 +107,7 @@ func init() {
 	restartCmd.Flags().StringVarP(&stateFilter, "state-filter", "s", "", "filter to connectors / tasks in this state")
 	restartCmd.Flags().BoolVar(&allTasks, "all-tasks", false, "also restart the connector's tasks")
 	restartCmd.Flags().BoolVar(&failedTasks, "failed-tasks", true, "also restart the connector's failed tasks")
-	restartCmd.Flags().BoolVar(&onlyTasks, "only-tasks", false, "also restart the connector's failed tasks")
+	restartCmd.Flags().BoolVar(&onlyTasks, "only-tasks", false, "only restart the connector's tasks, not the connector itself")
 
 	// Here you will define your flags and configuration settings.
 
