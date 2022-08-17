@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	golog "log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -32,6 +33,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	skipConfirm bool = false
+)
+
 type ConfigFile struct {
 	FileName       string
 	ConnectorName  string
@@ -42,6 +47,10 @@ type ConfigFile struct {
 	ValidationResp ValidationResponse
 	LoadResp       *http.Response
 	Error          error
+}
+
+func (cf *ConfigFile) FormattedStatus() string {
+	return FormatStatus(cf.LoadResp.Status, cf.LoadResp.StatusCode)
 }
 
 func (cf *ConfigFile) Read() {
@@ -138,6 +147,19 @@ var loadCmd = &cobra.Command{
 		}
 
 		rhttp := retryablehttp.NewClient()
+
+		// the retryablehttp client generates it's own logs that are not levelled
+		// the following prevents these logs from being outputted if the debg flag is not set
+		if !debug {
+			rhttp.Logger = golog.New(ioutil.Discard, "", golog.LstdFlags)
+		}
+		rhttp.RequestLogHook = func(_ retryablehttp.Logger, req *http.Request, attempt int) {
+			log.Debugf("Making request %d to %s", attempt, req.URL)
+		}
+		rhttp.ResponseLogHook = func(_ retryablehttp.Logger, resp *http.Response) {
+			log.Debugf("received response from: %s status: %s", resp.Request.URL, resp.Status)
+		}
+
 		rhttp.RetryMax = 3
 		rhttp.RetryWaitMin = time.Duration(5 * time.Second)
 
@@ -157,10 +179,27 @@ var loadCmd = &cobra.Command{
 
 		}
 
-		if allValid {
+		if allValid && skipConfirm {
 			fmt.Fprintf(cmd.OutOrStdout(), "All connectors are valid. Loading configs.\n")
 			for i, file := range files {
 				files[i].LoadResp = LoadConfig(rhttp, host, port, file)
+			}
+		} else if allValid {
+			err := templates.ExecuteTemplate(cmd.OutOrStdout(), "ValidationTemplate", files)
+
+			if err != nil {
+				fmt.Fprintf(cmd.OutOrStdout(), "Error rendering ValidationTemplate template %e.\n", err)
+				return
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "All connectors are valid. Load connectors? y/N ")
+			if AwaitUserConfirm() {
+				fmt.Fprintf(cmd.OutOrStdout(), "Loading configs.\n")
+				for i, file := range files {
+					files[i].LoadResp = LoadConfig(rhttp, host, port, file)
+				}
+			} else {
+				fmt.Fprintf(cmd.OutOrStdout(), "Skipped loading configs.\n")
+				return
 			}
 		}
 
@@ -174,7 +213,6 @@ var loadCmd = &cobra.Command{
 			fmt.Fprintf(cmd.OutOrStdout(), "Validation errors found, skipped loading configs.\n")
 			os.Exit(1)
 		}
-
 	},
 }
 
@@ -190,7 +228,7 @@ func LoadConfig(client *retryablehttp.Client, host string, port string, configFi
 	cobra.CheckErr(err)
 	respBodyBytes, _ := ioutil.ReadAll(resp.Body)
 	log.Debug(string(respBodyBytes))
-	log.Info("Put config for: ", configFile.ConnectorName, " got response status: ", resp.Status, " and code: ", resp.StatusCode)
+	log.Debug("Put config for: ", configFile.ConnectorName, " got response status: ", resp.Status, " and code: ", resp.StatusCode)
 	return resp
 
 }
@@ -238,6 +276,7 @@ type ValidationResponseFieldValue struct {
 func init() {
 	rootCmd.AddCommand(loadCmd)
 
+	loadCmd.Flags().BoolVarP(&skipConfirm, "skip-confirm", "f", false, "whether to prompt for confirmation when loading connectors")
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command

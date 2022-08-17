@@ -150,3 +150,18 @@ func FormatState(state string) string {
 	}
 	return color + state + Reset
 }
+
+func FormatStatus(status string, statusCode int) string {
+	color := ""
+	switch {
+	case statusCode < 200:
+		color = Gray
+	case statusCode < 300:
+		color = Green
+	case statusCode < 400:
+		color = Yellow
+	default:
+		color = Red
+	}
+	return color + status + Reset
+}
