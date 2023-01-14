@@ -11,6 +11,7 @@ LIST: {{ len . }} Connectors
         {{- printf " %8s %s  %s"  $task.FormattedState $task.WorkerId $task.Trace }}
     {{ end }}
 {{ end }}
+Total: {{ len . }} Connectors
 {{ end }}
 
 {{ define "StateListTemplate" -}}
@@ -51,7 +52,7 @@ n/a
 
 
 {{ define "com.google.pubsub.kafka.sink.CloudPubSubSinkConnector" }}
-{{- index .Config "topics" }} -> {{ index .Config "cps.topic" -}}
+{{- or (index .Config "topics") (index .Config "topics.regex") }} -> {{ index .Config "cps.topic" -}}
 {{ end }}
 
 {{ define "com.google.pubsub.kafka.source.CloudPubSubSourceConnector" }}
