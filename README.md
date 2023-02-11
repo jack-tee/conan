@@ -138,6 +138,37 @@ my-other-connector             /another/path/myconnector.json          Valid
 Validation errors found, skipping the loading of configs and exiting.
 ```
 
+## Comparing Connector Config (diff)
+
+The `diff` command can be used to show differences between connector json files and what is currently deployed to Kafka Connect.
+
+This can be used before loading connectors to check what changes will be applied.
+
+```
+> diff my-connectors/*.json
+
+Unchanged Connectors: 2
+    my-existing-connector-1
+    my-existing-connector-2
+
+New Connectors: 2
+    my-new-connector-1
+    my-new-connector-2
+
+Changed Connectors: 3
+    my-example-connector
+      + query.suffix: LIMIT 20000
+      ~ poll.interval.ms: 86400000 -> 900000
+      - numeric.mapping: best_fit
+
+    my-custom-query-connector
+      ~ query: 
+          - SELECT * FROM (SELECT * FROM example WHERE status IN ('Created'))
+          + SELECT * FROM (SELECT * FROM example WHERE status IN ('Created', 'Removed'))
+```
+Coloured output helps make the above command more readable.
+
+
 ## Saving and Setting Connector State
 
 Imagine the scenario where you have many connectors running and you need to pause a chunk of them for whatever reason and then want to return to the previous state. Conan can save the current state of all connectors using
@@ -160,8 +191,8 @@ You'd then pause whichever connectors you need to, e.g
 ...
 
 Connector 2 db1-table1-connector paused.
-Connector 2 db1-table2-connector paused.
-Connector 2 db1-table3-connector paused.
+Connector 3 db1-table2-connector paused.
+Connector 4 db1-table3-connector paused.
 
 ```
 

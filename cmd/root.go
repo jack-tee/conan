@@ -69,8 +69,22 @@ func toggleDebug(cmd *cobra.Command, args []string) {
 		log.SetLevel(log.DebugLevel)
 	}
 	log.SetFormatter(&log.TextFormatter{})
+	funcs := template.FuncMap{
+		"Green": func(t string) string {
+			return Green + t + Reset
+		},
+		"Red": func(t string) string {
+			return Red + t + Reset
+		},
+		"Yellow": func(t string) string {
+			return Yellow + t + Reset
+		},
+		"Gray": func(t string) string {
+			return Gray + t + Reset
+		},
+	}
 
-	templates = template.Must(template.New("").Parse(defaultTemplates))
+	templates = template.Must(template.New("").Funcs(funcs).Parse(defaultTemplates))
 	log.Debug("Loading templates using path ", templatesPath)
 	templates.ParseGlob(templatesPath)
 

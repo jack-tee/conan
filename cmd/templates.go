@@ -39,6 +39,39 @@ VALIDATION: {{ len . }} Connectors
 {{ end }}
 {{ end }}
 
+{{ define "DiffTemplate" -}}
+Unchanged Connectors: {{ len .UnchangedConnectors }}
+{{- range $id, $name := .UnchangedConnectors }}
+    {{ $name }}
+{{- end }}
+
+New Connectors: {{ len .NewConnectors }}
+{{- range $id, $name := .NewConnectors }}
+    {{ Green $name }}
+{{- end }}
+
+Changed Connectors: {{ len .ChangedConnectors }}
+{{- range $id, $diff := .ChangedConnectors }}
+    {{ $diff.ConnectorName }}
+    {{- range $key, $val := $diff.NewKeys }}
+      {{ Green (printf "+ %s: %s" $key $val) }}
+    {{- end }}
+    {{- range $key, $val := $diff.MismatchKeys }}
+        {{- if gt (len $val.Deployed ) 40 }}
+      {{ Yellow "~" }} {{ $key }}: 
+          {{ Red (printf "- %s" $val.Deployed) }}
+          {{ Green (printf "+ %s" $val.File) }}
+        {{- else }}
+      {{ Yellow "~" }} {{ $key }}: {{ Red $val.Deployed }} -> {{ Green  $val.File }}
+        {{- end }}
+    {{- end }}
+    {{- range $key, $val := $diff.RemovedKeys }}
+      {{ Red (printf "- %s: %s" $key $val) }}
+    {{- end }}
+{{ end }}
+Unchanged: {{ len .UnchangedConnectors }}, New: {{ len .NewConnectors }}, Changed: {{ len .ChangedConnectors }}
+{{ end }}
+
 
 {{ define "io.confluent.connect.jdbc.JdbcSourceConnector" }}
 {{- if ne (index .Config "tables") "" -}}
