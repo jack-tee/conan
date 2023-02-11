@@ -3,6 +3,20 @@ A simple <span style="color:#3a9025">Con</span>nector M<span style="color:#3a902
 
 Mainly aimed at managing JDBC Source Connectors.
 
+## Installation
+
+conan binaries are available for Mac and Linux, to install it to e.g. `/usr/local/bin/` use:
+
+Mac:
+```
+wget -c https://github.com/jack-tee/conan/releases/download/v0.0.28/conan-v0.0.28-darwin-amd64.tar.gz -O - | tar -x -C /usr/local/bin/
+```
+Linux:
+```
+wget -c https://github.com/jack-tee/conan/releases/download/v0.0.28/conan-v0.0.28-linux-amd64.tar.gz -O - | tar -x -C /usr/local/bin/
+```
+
+
 ## List Connectors
 
 The list command provides a summary of each task, returning the `tables` or `query` config parameter to make it easy to identify each task.
