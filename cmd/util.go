@@ -23,6 +23,15 @@ func HasCaseInsensitivePrefix(s string, prefix string) bool {
 	return strings.HasPrefix(strings.ToLower(s), strings.ToLower(prefix))
 }
 
+func contains(c []string, s string) bool {
+	for _, a := range c {
+		if a == s {
+			return true
+		}
+	}
+	return false
+}
+
 func AwaitUserConfirm() bool {
 	input := "n"
 	fmt.Scanln(&input)

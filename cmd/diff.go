@@ -24,10 +24,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var showOmitted bool
+
 type DiffResults struct {
+	DiffedConnectors    []string
 	NewConnectors       []string
 	ChangedConnectors   []DiffResult
 	UnchangedConnectors []string
+	OmittedConnectors   []string
+	ShowOmitted         bool
 }
 
 type DiffResult struct {
@@ -80,22 +85,28 @@ var diffCmd = &cobra.Command{
 		}
 
 		var diffResults DiffResults
+		diffResults.ShowOmitted = showOmitted
+
+		connectors := GetConnectorsList(host, port)
 
 		// loop through connectors and compare their config to what is deployed
 		for _, file := range files {
-			log.Debug(file.ConnectorName)
+			log.Debug("loading " + file.ConnectorName)
+
+			diffResults.DiffedConnectors = append(diffResults.DiffedConnectors, file.ConnectorName)
+
+			if !contains(connectors, file.ConnectorName) {
+				log.Debug("the connector " + file.ConnectorName + " doesn't exist")
+				diffResults.NewConnectors = append(diffResults.NewConnectors, file.ConnectorName)
+				continue
+			}
 
 			// get the currently deployed config for the connector
-			resp := GetConnectorConfig(host, port, file.ConnectorName)
-			log.Debug(resp)
-			if _, exists := resp["error_code"]; exists {
-				if message, exists := resp["message"]; exists {
-					if strings.Contains(message, "not found") {
-						log.Debug("the connector " + file.ConnectorName + " doesn't exist")
-						diffResults.NewConnectors = append(diffResults.NewConnectors, file.ConnectorName)
-					} else {
-						log.Warn("there was an error getting the deployed connector config for " + file.ConnectorName + " - " + message)
-					}
+			conf := GetConnectorConfig(host, port, file.ConnectorName)
+			log.Debug(conf)
+			if _, exists := conf["error_code"]; exists {
+				if message, exists := conf["message"]; exists {
+					log.Warn("there was an error getting the deployed connector config for " + file.ConnectorName + " - " + message)
 				} else {
 					log.Warn("there was an error getting the deployed connector config for " + file.ConnectorName)
 				}
@@ -109,7 +120,7 @@ var diffCmd = &cobra.Command{
 
 			for fileKey, fileVal := range file.Config {
 
-				if deployedVal, exists := resp[fileKey]; exists {
+				if deployedVal, exists := conf[fileKey]; exists {
 					if fileVal == deployedVal {
 						matchKeys[fileKey] = cleanseVal(fileKey, fileVal)
 					} else {
@@ -121,7 +132,7 @@ var diffCmd = &cobra.Command{
 				}
 			}
 
-			for deployedKey, deployedVal := range resp {
+			for deployedKey, deployedVal := range conf {
 				if _, exists := file.Config[deployedKey]; !exists {
 					removedKeys[deployedKey] = cleanseVal(deployedKey, deployedVal)
 				}
@@ -141,6 +152,15 @@ var diffCmd = &cobra.Command{
 			}
 		}
 		log.Debug(diffResults)
+
+		if showOmitted {
+			for _, c := range connectors {
+				if !contains(diffResults.DiffedConnectors, c) {
+					diffResults.OmittedConnectors = append(diffResults.OmittedConnectors, c)
+				}
+			}
+
+		}
 
 		err := templates.ExecuteTemplate(cmd.OutOrStdout(), "DiffTemplate", diffResults)
 		if err != nil {
@@ -162,6 +182,8 @@ func cleanseVal(key string, val string) string {
 }
 func init() {
 	rootCmd.AddCommand(diffCmd)
+
+	diffCmd.Flags().BoolVarP(&showOmitted, "show-omitted", "o", false, "whether to show connectors that are currently deployed but are not included in the specified config files")
 
 	// Here you will define your flags and configuration settings.
 

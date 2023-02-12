@@ -63,10 +63,10 @@ var saveCmd = &cobra.Command{
 		log.Debug(fmt.Sprintf("creating file %s", filename))
 
 		f, err := os.Create(filename)
-		defer f.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer f.Close()
 		listState(cmd, f, args)
 	},
 }

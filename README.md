@@ -9,11 +9,11 @@ conan binaries are available for Mac and Linux, to install it to e.g. `/usr/loca
 
 Mac:
 ```
-wget -c https://github.com/jack-tee/conan/releases/download/v0.0.30/conan-v0.0.30-darwin-amd64.tar.gz -O - | tar -x -C /usr/local/bin/
+wget -c https://github.com/jack-tee/conan/releases/download/v0.0.31/conan-v0.0.31-darwin-amd64.tar.gz -O - | tar -x -C /usr/local/bin/
 ```
 Linux:
 ```
-wget -c https://github.com/jack-tee/conan/releases/download/v0.0.30/conan-v0.0.30-linux-amd64.tar.gz -O - | tar -x -C /usr/local/bin/
+wget -c https://github.com/jack-tee/conan/releases/download/v0.0.31/conan-v0.0.31-linux-amd64.tar.gz -O - | tar -x -C /usr/local/bin/
 ```
 
 

@@ -40,6 +40,14 @@ VALIDATION: {{ len . }} Connectors
 {{ end }}
 
 {{ define "DiffTemplate" -}}
+{{- if .ShowOmitted -}}
+Omitted Connectors: {{ len .OmittedConnectors }} (these are connectors that are currently deployed but are not included in the specified config files)
+{{- range $id, $name := .OmittedConnectors }}
+    {{ $name }}
+{{- end }}
+
+{{ end -}}
+
 Unchanged Connectors: {{ len .UnchangedConnectors }}
 {{- range $id, $name := .UnchangedConnectors }}
     {{ $name }}

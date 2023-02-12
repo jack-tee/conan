@@ -30,10 +30,7 @@ func (c Connector) PollInterval() string {
 	return FormatPollInterval((pollIntervalMs))
 }
 
-// GetConnectorsMap returns a map of connectorId -> connectorName
-// The connectorId is based on the alphabetically sorted connectorNames
-func GetConnectorsMap(host string, port string) map[int]Connector {
-
+func GetConnectorsList(host string, port string) []string {
 	url := fmt.Sprintf("http://%s:%s/connectors", host, port)
 	log.Debug("getting connectors using URL: ", url)
 
@@ -48,6 +45,14 @@ func GetConnectorsMap(host string, port string) map[int]Connector {
 
 	sort.Strings(connectors)
 	log.Debug("connectors found: ", connectors)
+	return connectors
+}
+
+// GetConnectorsMap returns a map of connectorId -> connectorName
+// The connectorId is based on the alphabetically sorted connectorNames
+func GetConnectorsMap(host string, port string) map[int]Connector {
+
+	connectors := GetConnectorsList(host, port)
 
 	connectorsMap := make(map[int]Connector)
 
